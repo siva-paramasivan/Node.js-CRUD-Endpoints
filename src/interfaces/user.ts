@@ -10,3 +10,12 @@ export interface AuthenticationResponse {
     username: string;
     token: string;
   }
+
+export interface Customer{
+  id:string;
+  name:string;
+  address:string;
+  emailAddress:string;
+  contactInformation:number;
+  createdBy:'sivaprakash';
+}

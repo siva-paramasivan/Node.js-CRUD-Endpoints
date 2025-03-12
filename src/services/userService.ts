@@ -2,87 +2,72 @@ import { ConnectionPool, config } from 'mssql';
 import sql from 'mssql'
 import bcrypt from 'bcrypt';
 import dbConfig from '../config/dbConfig';
-import { User } from '../interfaces/user';
+import { Customer, User } from '../interfaces/user';
+import { CustomerModel } from '../models/customer-model';
+import { Users } from '../models/user-model';
+
 // Define the User interface
 
 
 // Define the UserWithoutPassword interface
 export interface UserWithoutPassword extends Omit<User, 'password'> {}
 
-// Create a connection pool instance
-class Database {
-  private pool: ConnectionPool | null = null;
-
-  async connect(): Promise<void> {
-    if (!this.pool) {
-      this.pool = await sql.connect(dbConfig);
+const getAllCustomers = async() => {
+  return CustomerModel.findAll().then(res => 
+    { const result = res.map(x => x.dataValues).sort((a,b)=>a.createdAt<b.createdAt?-1:1)
+      return result;
     }
-  }
+   )
+  .catch((error:any)=>{
+    throw new Error(`Get All Customer Failed: ${error.message}`);})
+};
 
-  getPool(): ConnectionPool {
-    if (!this.pool) {
-      throw new Error('Database not connected');
-    }
-    return this.pool;
-  }
+// Function to create a user with error handling
+const createCustomer = async (customerDetails:CustomerModel) => {
+    return CustomerModel.create(customerDetails)
+    .then(res=> res)
+    .catch (error=> {
+    console.error('Error creating user:', error);
+    throw new Error(`Failed to create user ${error}`);  // Custom error
+  })
+  .finally();
+};
 
-  async close(): Promise<void> {
-    if (this.pool) {
-      await this.pool.close();
-      this.pool = null;
-    }
-  }
-}
 
-const database = new Database();
+const saveCustomer = (customerDetails:CustomerModel) => {
+   return CustomerModel.update(customerDetails,{ where: { id: customerDetails.id } })
+    .then(res => res)
+    .catch((error:any)=>{
+      throw new Error(`Update Failed: ${error.message}`);})
+};
 
-// Get users list from Users Table Database
-async function queryCall(): Promise<User[]> {
-  await database.connect();
-  try {
-    const result = await database.getPool().request().query('SELECT * FROM users');
-    return result.recordset as User[];
-  } catch (err:any) {
-    throw new Error(`Database query failed: ${err.message}`);
-  } finally {
-    await database.close();
-  }
-}
+const deleteCustomer = async (UUID:string) => {
+  return CustomerModel.destroy({where:{id:UUID}}).then(res=> res)
+  .catch(error =>{console.error('Error creating user:', error);
+    throw new Error(`Failed to create user ${error}`);
+  })
+};
 
-// Return all users list without passwords
-export async function getAllUsersList(): Promise<UserWithoutPassword[]> {
-  const userData = await queryCall();
-  return userData.map(u => omitPassword(u));
-}
-
-// Register a new user
-export async function register(user: User): Promise<void> {
-  const hashedPassword = await bcrypt.hash(user.password, 10);
-  await database.connect();
-  try {
-    const query = 'INSERT INTO users (firstname, lastname, username, password) VALUES (@firstname, @lastname, @username, @password)';
-    await database.getPool().request()
-      .input('firstname', sql.VarChar, user.firstname)
-      .input('lastname', sql.VarChar, user.lastname)
-      .input('username', sql.VarChar, user.username)
-      .input('password', sql.VarChar, hashedPassword)
-      .query(query);
-  } catch (err:any) {
-    throw new Error(`Database insertion failed: ${err.message}`);
-  } finally {
-    await database.close();
-  }
-}
+const createUser = async (customerDetails:User) => {
+    return Users.create(customerDetails)
+    .then(res=> res)
+    .catch ( error => {
+    console.error('Error creating user:', error);
+    throw new Error(`Failed to create user ${error}`);  // Custom error
+  })
+};
 
 // Helper function to omit the password from the user object
-function omitPassword(user: User): UserWithoutPassword {
+function omitPassword(user: any): UserWithoutPassword {
   const { password, ...userWithoutPassword } = user;
   return userWithoutPassword;
 }
 
 export default {
-  queryCall,
-  getAllUsersList,
-  register,
-  omitPassword
+  getAllCustomers,
+  createCustomer,
+  createUser,
+  omitPassword,
+  deleteCustomer,
+  saveCustomer
 };
