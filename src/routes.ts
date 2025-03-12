@@ -4,7 +4,7 @@ import userController from './controller/userController';
 
 const router = Router();
 
-  router.use('/api',authController),
+   router.use('/api',authController),
   router.use('/api/users',userController)
   
   export default router;

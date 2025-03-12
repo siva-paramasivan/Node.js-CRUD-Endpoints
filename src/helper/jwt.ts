@@ -15,7 +15,7 @@ const jwtMiddleware = (): RequestHandler => {
     }).unless({
         path: [
             // Public routes that don't require authentication
-            '/api/users/register',
+            '/api/applicationUser',
             '/api/login',
         ],
     });
